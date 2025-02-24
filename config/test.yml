@@ -1,0 +1,21 @@
+test:
+  checkpoint: /home/node57_data2/bykang/work_plus/exp/2048_se_llama_feat_concat_multi_loss_0129_same_segment/40000.pt.tar # ./ckpt/best.pt.tar
+  use_cuda: True
+  infer_feat_too: True
+  inference_time: 1
+
+task: SS # TSE,SS,AEC,PLC
+
+save:
+  feat_dir: ./decode/feat
+  wav_dir: ./decode/wav
+
+# llama config
+nnet_conf:
+  d_model: 1024
+  nhead: 16
+  num_layers: 16
+  
+datareader:
+  sample_rate: 16000
+  filename: /path/to/your/filelist
