@@ -1,48 +1,55 @@
 import os
 import sys
-import argparse
+import time
+import librosa
 import yaml
+import joblib
+import argparse
+
 import soundfile as sf
 import numpy as np
 
 from pathlib import Path
+from collections import defaultdict
 from typing import Optional
 from tqdm import tqdm
-from collections import OrderedDict
-
-import torch
-import torch.nn as nn
-import torch.distributed as dist
-import torch.nn.functional as F
-from torch.nn.parallel import DistributedDataParallel
 
 sys.path.append(os.path.dirname(__file__))
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-# for WavLM
+# Torch
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel
+
+# WavLM
 from nnet.WavLM import WavLM, WavLMConfig
 
-# for encodec
-from transformers import AutoFeatureExtractor, Wav2Vec2BertModel
+# Xcodec2
 from vq.codec_encoder import CodecEncoder_Transformer
 from vq.codec_decoder_vocos import CodecDecoderVocos
 from vq.module import SemanticEncoder
+from transformers import AutoFeatureExtractor, Wav2Vec2BertModel
+from collections import OrderedDict
 
-# Simple Datareader
+# Dataloader
 from loader.datareader import DataReader
 from loader.datareader_aec import DataReaderAEC
 from loader.datareader_tse import DataReaderTSE
 
-# llase
+# LLaSE
 from nnet.llase import LLM_AR as model
 
 class Encodec():
     '''
-    load Xcodec2 
+    Load Xcodec2
     '''
     def __init__(self,device="cpu") -> None:
         self.device=device
-        ckpt = './ckpt/codec_ckpt/epoch=4-step=1400000.ckpt'
+        ckpt = "./ckpt/codec_ckpt/epoch=4-step=1400000.ckpt",
+        # ckpt = '/home/bykang/codec_ckpt/epoch=4-step=1400000.ckpt'
         ckpt = torch.load(ckpt, map_location='cpu')
         state_dict = ckpt['state_dict']
         filtered_state_dict_codec = OrderedDict()
@@ -68,7 +75,8 @@ class Encodec():
                 filtered_state_dict_fc_prior[new_key] = value
         
         self.semantic_model = Wav2Vec2BertModel.from_pretrained(
-            "./ckpt/codec_ckpt/hub/models--facebook--w2v-bert-2.0/snapshots/da985ba0987f70aaeb84a80f2851cfac8c697a7b",
+            "./ckpt/codec_ckpt/hub/models--facebook--w2v-bert-2.0",
+            # "/home/bykang/codec_ckpt/hub/models--facebook--w2v-bert-2.0/snapshots/da985ba0987f70aaeb84a80f2851cfac8c697a7b",
             output_hidden_states=True)
         self.semantic_model=self.semantic_model.eval().to(self.device)
         
@@ -93,8 +101,8 @@ class Encodec():
         self.fc_prior = self.fc_prior.eval().to(self.device)
 
         self.feature_extractor = AutoFeatureExtractor.from_pretrained(
-            "./ckpt/codec_ckpt/hub/models--facebook--w2v-bert-2.0/snapshots/da985ba0987f70aaeb84a80f2851cfac8c697a7b")
-        
+            "./ckpt/codec_ckpt/hub/models--facebook--w2v-bert-2.0")
+            # "/home/bykang/codec_ckpt/hub/models--facebook--w2v-bert-2.0/snapshots/da985ba0987f70aaeb84a80f2851cfac8c697a7b")
     
     def get_feat(self, wav_batch, pad=None):
 
@@ -155,29 +163,28 @@ class Encodec():
         vq_post_emb = vq_post_emb.transpose(1, 2)
         vq_post_emb = self.fc_post_a(vq_post_emb.transpose(1,2)).transpose(1,2)
         recon = self.decoder(vq_post_emb.transpose(1, 2), vq=False)[0].squeeze()
+        # if write the wav, add .squeeze().detach().cpu().numpy()
+        # if need gradient use the config right now
         return recon
 
 class WavLM_feat(object):
     '''
-    reload pretrained wavlm and extract audio feature
+    Load WavLM
     '''
-    
     def __init__(self, device):
         self.wavlm = self._reload_wavLM_large(device=device)
-        self.wavlm.eval()
 
     def __call__(self, wav):
         T = wav.shape[-1]
         wav = wav.reshape(-1, T)
         with torch.no_grad():
             feat = self.wavlm.extract_features(wav, output_layer=6, ret_layer_results=False)[0]
-            # B x T x 768(1024) -> B*T x 768(1024)
             B, T, D = feat.shape
             feat = torch.reshape(feat, (-1, D))
 
-            return feat 
+            return feat
 
-    def _reload_wavLM_large(self, path="./ckpt/WavLM-Large.pt", device: Optional[torch.device] = None):
+    def _reload_wavLM_large(self, path="/home/bykang/WavLM-Large.pt", device: Optional[torch.device] = None):
         cpt = torch.load(path, map_location="cpu")
         cfg = WavLMConfig(cpt['cfg'])
         wavLM = WavLM(cfg)
@@ -189,6 +196,21 @@ class WavLM_feat(object):
             p.requires_grad = False
         print('successful to reload wavLM', path)
         return wavLM 
+
+def get_firstchannel_read(path, fs=16000):
+    '''
+    Get first channel of the wav
+    '''
+    wave_data, sr = sf.read(path)
+    if sr != fs:
+        if len(wave_data.shape) != 1:
+            wave_data = wave_data.transpose((1, 0))
+        wave_data = librosa.resample(wave_data, orig_sr=sr, target_sr=fs)
+        if len(wave_data.shape) != 1:
+            wave_data = wave_data.transpose((1, 0))
+    if len(wave_data.shape) > 1:
+        wave_data = wave_data[:, 0]
+    return wave_data
 
 def load_obj(obj, device):
     '''
@@ -204,9 +226,7 @@ def load_obj(obj, device):
     else:
         return cuda(obj)
 
-
 def run(args):
-    # DDP initialize
     LOCAL_RANK = int(os.environ['LOCAL_RANK'])
     WORLD_SIZE = int(os.environ['WORLD_SIZE'])
     WORLD_RANK = int(os.environ['RANK'])    
@@ -215,11 +235,10 @@ def run(args):
     device = torch.device('cuda', LOCAL_RANK)
     print(f"[{os.getpid()}] using device: {device}", torch.cuda.current_device(), "local rank", LOCAL_RANK)
 
-    # load config
     with open(args.conf, "r") as f:
         conf = yaml.load(f, Loader=yaml.FullLoader)
 
-    # Datareader and Mkdir
+    # Dataloader
     if conf["task"]=="AEC":
         data_reader = DataReaderAEC(**conf["datareader"])
     elif conf["task"]=="TSE":
@@ -227,29 +246,11 @@ def run(args):
     else:
         data_reader = DataReader(**conf["datareader"])
 
-    if not os.path.exists(conf["save"]["feat_dir"]):
-        os.makedirs(conf["save"]["feat_dir"])
-    if not os.path.exists(conf["save"]["est_dir"]):
-        os.makedirs(conf["save"]["est_dir"])
-    if not os.path.exists(conf["save"]["wav_dir"]):
-        os.makedirs(conf["save"]["wav_dir"])
-
-    if conf["task"] == "TSE" or conf["task"] == "AEC":
-        if not os.path.exists(conf["save"]["feat_dir"]+"/mic"):
-            os.makedirs(conf["save"]["feat_dir"]+"/mic")
-        if not os.path.exists(conf["save"]["feat_dir"]+"/ref"):
-            os.makedirs(conf["save"]["feat_dir"]+"/ref")
-
-    if conf["task"] == "SS":
-        if not os.path.exists(conf["save"]["wav_dir"]+"/s1"):
-            os.makedirs(conf["save"]["wav_dir"]+"/s1")
-        if not os.path.exists(conf["save"]["wav_dir"]+"/s2"):
-            os.makedirs(conf["save"]["wav_dir"]+"/s2")
-
-    # load model here
+    # Load WavLM and XCodec2
     codec = Encodec(device)
     wavlm_feat = WavLM_feat(device)
 
+    # Load LLaSE
     nnet = model(**conf["nnet_conf"])
     cpt_fname = Path(conf["test"]["checkpoint"])
     cpt = torch.load(cpt_fname, map_location="cpu")
@@ -259,9 +260,26 @@ def run(args):
     nnet.load_state_dict(cpt["model_state_dict"])
     nnet.eval()
 
+    # Make sure the dir exists
+    if conf["task"]=="AEC":
+        if not os.path.exists(conf["save"]["feat_dir"]+"/mic"):
+            os.makedirs(conf["save"]["feat_dir"]+"/mic")
+        if not os.path.exists(conf["save"]["feat_dir"]+"/ref"):
+            os.makedirs(conf["save"]["feat_dir"]+"/ref")
+    elif conf["task"]=="TSE":
+        if not os.path.exists(conf["save"]["feat_dir"]+"/mic"):
+            os.makedirs(conf["save"]["feat_dir"]+"/mic")
+        if not os.path.exists(conf["save"]["feat_dir"]+"/ref"):
+            os.makedirs(conf["save"]["feat_dir"]+"/ref")
+    else:
+        if not os.path.exists(conf["save"]["feat_dir"]):
+            os.makedirs(conf["save"]["feat_dir"])
+            
+    if not os.path.exists(conf["save"]["wav_dir"]):
+        os.makedirs(conf["save"]["wav_dir"])      
+
+    # Main of inference
     if_feat_too = conf["test"]["infer_feat_too"]
-    
-    print(if_feat_too)
 
     origin_feat_dir = conf["save"]["feat_dir"]
     origin_wav_dir = conf["save"]["wav_dir"]
@@ -270,6 +288,7 @@ def run(args):
     last_wav_dir = origin_wav_dir
 
     for inference_time in range(conf["test"]["inference_time"]):
+        # For multi-inference
         if inference_time > 0:
             feat_dir = origin_feat_dir + "inference" + str(inference_time) 
             wav_dir = origin_wav_dir + "inference" + str(inference_time) 
@@ -281,8 +300,9 @@ def run(args):
             os.makedirs(feat_dir)
         if not os.path.exists(wav_dir):
             os.makedirs(wav_dir)
-        
-        with th.no_grad():
+
+        with torch.no_grad():
+            # Extract WavLM features
             if if_feat_too ==True or inference_time>0:
                 for egs in tqdm(data_reader):
                     egs = load_obj(egs, device)
@@ -292,31 +312,25 @@ def run(args):
                             mic_path = last_wav_dir + '/' + egs["mic_name"] + ".wav"
                             egs["mic"] = torch.from_numpy(get_firstchannel_read(mic_path).astype(np.float32)).unsqueeze(0).to(device)
                         else:
-                            egs["mic"]=egs["mic"].contiguous()
-                            
+                            egs["mic"]=egs["mic"].contiguous()                            
                         egs["ref"]=egs["ref"].contiguous()
 
-                        print("mic", egs["mic"].shape)
-                        print("ref", egs["ref"].shape)
-
                         feat_mic = wavlm_feat(egs["mic"])
-                        
                         out_mic = feat_mic.detach().squeeze(0).cpu().numpy()
                         
                         if not os.path.exists(os.path.join(feat_dir, "mic")):
-                            os.makedirs(os.path.join(feat_dir, "mic"))
-                            
+                            os.makedirs(os.path.join(feat_dir, "mic"))    
                         np.save(os.path.join(feat_dir, "mic", egs["mic_name"]), out_mic)
                         
+                        # For AEC and TSE, reference audio only need to extract feats at first time
                         if inference_time == 0:
                             feat_ref = wavlm_feat(egs["ref"])
                             out_ref = feat_ref.detach().squeeze(0).cpu().numpy()
                             np.save(os.path.join(origin_feat_dir, "ref", egs["ref_name"]), out_ref)
+
                         torch.cuda.empty_cache()
 
                     else:
-                        print(egs['mix'].shape)
-                        
                         if inference_time > 0:
                             mix_path = last_wav_dir + '/' + egs["name"] + ".wav"
                             egs["mix"] = torch.from_numpy(get_firstchannel_read(mix_path).astype(np.float32)).unsqueeze(0).to(device)
@@ -327,76 +341,88 @@ def run(args):
                         out = feat.detach().squeeze(0).cpu().numpy()
                         np.save(os.path.join(feat_dir, egs["name"]), out)
             
+            # Predict the clean tokens and token2wav
             for egs in tqdm(data_reader):
                 egs = load_obj(egs, device)
                 sr = 16000
                 
                 if conf["task"] == "AEC":
+                    # Get feat
                     feat_path_mic = os.path.join(feat_dir, "mic", egs["mic_name"]) + ".npy" 
                     feat_path_ref = os.path.join(origin_feat_dir, "ref", egs["ref_name"]) + ".npy"
 
                     feat_mic = torch.from_numpy(np.load(feat_path_mic)).unsqueeze(0)
                     feat_ref = torch.from_numpy(np.load(feat_path_ref)).unsqueeze(0)
 
+                    # For multi-inference
                     if inference_time > 0:
                         est = nnet(feat_mic)
                     else:
                         est = nnet(feat_mic, feat_ref)
-                    max, max_indices_1 = torch.max(est[1], dim=1)
 
+                    # Get tokens and token2wav
+                    max, max_indices_1 = torch.max(est[1], dim=1)
                     recon_1 = codec.token2wav(max_indices_1.unsqueeze(0)).squeeze().detach().cpu().numpy()
 
+                    # Save the wav
                     target_path = os.path.join(wav_dir, egs["mic_name"] + ".wav")
                     print(target_path)
                     sf.write(target_path , recon_1, sr)   
                     
                 elif conf["task"] == "TSE" :
+                    # Get feat
                     feat_path_mic = os.path.join(feat_dir, "mic", egs["mic_name"]) + ".npy" 
                     feat_path_ref = os.path.join(origin_feat_dir, "ref", egs["ref_name"]) + ".npy"
 
                     feat_mic = torch.from_numpy(np.load(feat_path_mic)).unsqueeze(0)
                     feat_ref = torch.from_numpy(np.load(feat_path_ref)).unsqueeze(0)
 
-                    if inference_time>0 and conf["test"]["if_ref"]==False:
+                    # Choose if keep the enroallment audio while multi-inference
+                    if_keep_ref = True
+
+                    if inference_time>0 and if_keep_ref== False:
                         est = nnet(feat_mic)
                     else:
                         est = nnet(feat_mic, feat_ref)
-                        
+                    
+                    # Get tokens and token2wav
                     max, max_indices_1 = torch.max(est[0], dim=1)
-
                     recon_1 = codec.token2wav(max_indices_1.unsqueeze(0)).squeeze().detach().cpu().numpy()
 
+                    # Save the wav
                     target_path = os.path.join(wav_dir, egs["mic_name"] + ".wav")
                     print(target_path)
                     sf.write(target_path , recon_1, sr) 
                     
                 elif conf["task"] == "PLC":
+                    # Get feat
                     feat_path = os.path.join(feat_dir, egs["name"]) + ".npy" 
-                    # loss_mask = egs["loss_mask"]
-                    
                     feat = torch.from_numpy(np.load(feat_path)).unsqueeze(0)
-                    # est = nnet(feat, zero)
+
+                    # Get tokens and token2wav
                     est = nnet(feat)
                     max, max_indices_1 = torch.max(est[1], dim=1)
-
                     recon_1 = codec.token2wav(max_indices_1.unsqueeze(0)).squeeze().detach().cpu().numpy()
 
+                    # Save the wav
                     target_path = os.path.join(wav_dir, egs["name"] + ".wav")
                     print(target_path)
                     sf.write(target_path , recon_1, sr)
                     
-                elif conf["task"] == "SP":
+                elif conf["task"] == "SS":
+                    # Get feat
                     feat_path = os.path.join(feat_dir, egs["name"]) + ".npy" 
                     feat = torch.from_numpy(np.load(feat_path)).unsqueeze(0)
                     
+                    # Separate the first speaker
                     est = nnet(feat)
                     max, max_indices_1 = torch.max(est[1], dim=1)
-                    
                     recon_1 = codec.token2wav(max_indices_1.unsqueeze(0)).squeeze().detach().cpu().numpy()
+
                     target_path_1 = os.path.join(wav_dir, egs["name"] + ".wav")
-                    
                     sf.write(target_path_1 , recon_1, sr)
                     
+                    # Separate the second speaker, SS need at least 2 inference time in config
                     if inference_time > 0:
                         origin_feat_path = os.path.join(origin_feat_dir, egs["name"]) + ".npy"
                         origin_feat = torch.from_numpy(np.load(origin_feat_path)).unsqueeze(0)
@@ -412,24 +438,21 @@ def run(args):
                         sf.write(target_path_2 , recon_2, sr)
                     
                 else:
+                    # Get feat
                     feat_path = os.path.join(feat_dir, egs["name"]) + ".npy" 
                     feat = torch.from_numpy(np.load(feat_path)).unsqueeze(0)
                     
+                    # Get tokens and token2wav
                     est = nnet(feat)
                     max, max_indices_1 = torch.max(est[1], dim=1)
-
                     recon_1 = codec.token2wav(max_indices_1.unsqueeze(0)).squeeze().detach().cpu().numpy()
 
+                    # Save the wav
                     target_path = os.path.join(wav_dir, egs["name"] + ".wav")
                     print(target_path)
-                    sf.write(target_path , recon_1, sr)
-                        
-                    if conf["save"]["if_spk"]==True :
-                        spk_name = egs["name"].split('fileid_')[1]
-                        spk_path = os.path.join(conf["save"]["spk_dir"], "fileid_" + spk_name + ".wav")
-                        print(spk_path)
-                        sf.write(spk_path , recon_1, sr)
-        
+                    sf.write(target_path , recon_1, sr)        
+
+        # For next inference
         last_feat_dir = feat_dir
         last_wav_dir = wav_dir
 
@@ -445,6 +468,7 @@ if __name__ == "__main__":
                         type=str,
                         default="nccl",
                         choices=["nccl", "gloo"])                          
-    args = parser.parse_args()
+    args = parser.parse_args()    
+    # for nccl debug
     os.environ["NCCL_DEBUG"] = "INFO"
     run(args)
