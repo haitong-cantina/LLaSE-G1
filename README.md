@@ -1,5 +1,18 @@
 # LLaSE-G1: Incentivizing Generalization Capability for LLaMA-based Speech Enhancement
 
+<p align="center">
+  <a href="https://arxiv.org/abs/2503.00493">
+    <img src="https://img.shields.io/badge/Paper-ArXiv-red.svg" alt="Paper">
+  </a>
+  <a href="https://submission-papers.github.io/LLaSE-G1-demo-page/">
+    <img src="https://img.shields.io/badge/Demo-Page-blue.svg" alt="Demo">
+  </a>
+  <a href="https://huggingface.co/ASLP-lab/LLaSE-G1">
+    <img src="https://img.shields.io/badge/Model-Hugging%20Face-yellow.svg" alt="Hugging Face">
+  </a>
+</p>
+
+
 ## Introduction
 
 LLaSE-G1 is a unified speech enhancement model capable of handling multiple tasks without extra task prompts, including:
@@ -96,9 +109,6 @@ If you find this work useful, please cite our paper:
 }
 ```
 
-## License
-
-This project is released under the **Apache-2.0**.
 
 ## Contact
 
