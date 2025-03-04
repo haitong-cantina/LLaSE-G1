@@ -12,7 +12,6 @@
   </a>
 </p>
 
-
 ## Introduction
 
 LLaSE-G1 is a unified speech enhancement model capable of handling multiple tasks without extra task prompts, including:
