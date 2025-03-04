@@ -12,7 +12,7 @@
   </a>
 </p>
 
-![LLaSE-G1](https://github.com/user-attachments/assets/53dd575b-b03a-4666-8e5f-40d18524451e)
+![LLaSE-G1](LLaSE-G1.png)
 
 
 ## Introduction
