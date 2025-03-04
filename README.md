@@ -12,6 +12,9 @@
   </a>
 </p>
 
+![LLaSE-G1](https://github.com/user-attachments/assets/53dd575b-b03a-4666-8e5f-40d18524451e)
+
+
 ## Introduction
 
 LLaSE-G1 is a unified speech enhancement model capable of handling multiple tasks without extra task prompts, including:
