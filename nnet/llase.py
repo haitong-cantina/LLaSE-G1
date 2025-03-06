@@ -3,14 +3,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-
-from typing import Tuple, Union, Optional, Literal, List
-from transformers import LlamaConfig, LlamaForCausalLM
-
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-NUM_AUDIO_TOKENS = 65536 #Codebook size of Xcodec2
+from typing import Union, Optional
+from transformers import LlamaConfig, LlamaForCausalLM
+
+NUM_AUDIO_TOKENS = 65536 # Codebook size
 
 class LLM_AR(nn.Module):
     def __init__(
@@ -80,6 +79,7 @@ class LLM_AR(nn.Module):
         return logits_y, logits_x
 
 if __name__=="__main__":
+    # Simple test
     model = LLM_AR(d_model=1024, nhead=8, num_layers=16)
     ce_loss = nn.CrossEntropyLoss()
 
