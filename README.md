@@ -80,6 +80,7 @@ To run inference, configure the parameters in `./config/test.yml`:
 | `feat_dir`       | Directory containing extracted features.                                                                                                                               |
 | `wav_dir`        | Directory of processed audio files.                                                                                                                                    |
 | `task`           | Task type: `SE` (Noise Suppression), `TSE` (Target Speaker Extraction), `PLC` (Packet Loss Concealment), `AEC` (Acoustic Echo Cancellation), `SS` (Speech Separation). |
+| `filename`       | It should be the path of a text file, which contains the paths of the audio files you want to process. For example: /home/0.wav |
 
 Command to run inference:
 
