@@ -95,6 +95,10 @@ Samples processed by LLaSE-G1 can be found on our [Demo Page](https://submission
 
 Our pretrained model is available on [Hugging Face](https://huggingface.co/ASLP-lab/LLaSE-G1).
 
+## Hints
+
+Our approach focuses on leveraging the LLM's comprehension capabilities to enable autonomous determination of task types, though this may exhibit instability in certain scenarios. A more stable and robust iteration will be released in the upcoming version.
+
 ## Citation
 
 If you find this work useful, please cite our paper:
