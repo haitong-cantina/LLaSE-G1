@@ -54,7 +54,7 @@ pip install -r requirements.txt
 
 ### 3. Download Pretrained Models
 
-LLaSE-G1 requires three additional pre-trained models to function properly. You can download them using the provided shell script:
+LLaSE-G1 requires three additional pre-trained models and checkpoint of the middle LM on Huggingface to function properly. You can download them using the provided shell script:
 
 ```bash
 bash ./ckpt/download.sh
