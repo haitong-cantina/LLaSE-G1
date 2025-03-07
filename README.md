@@ -57,7 +57,8 @@ pip install -r requirements.txt
 LLaSE-G1 requires three additional pre-trained models and checkpoint of the middle LM on Huggingface to function properly. You can download them using the provided shell script:
 
 ```bash
-bash ./ckpt/download.sh
+cd ckpt
+bash download.sh
 ```
 
 Alternatively, you can download them manually and place them in the `./ckpt/` directory.
