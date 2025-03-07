@@ -62,6 +62,7 @@ bash download.sh
 ```
 
 Alternatively, you can download them manually and place them in the `./ckpt/` directory.
+
 After Downloading, the tree should be like this:
 
 ```bash
