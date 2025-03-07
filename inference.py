@@ -48,7 +48,7 @@ class Encodec():
     '''
     def __init__(self,device="cpu") -> None:
         self.device=device
-        ckpt = "./ckpt/codec_ckpt/epoch=4-step=1400000.ckpt",
+        ckpt = "./ckpt/codec_ckpt/epoch=4-step=1400000.ckpt"
         # ckpt = '/home/bykang/codec_ckpt/epoch=4-step=1400000.ckpt'
         ckpt = torch.load(ckpt, map_location='cpu')
         state_dict = ckpt['state_dict']
@@ -184,7 +184,7 @@ class WavLM_feat(object):
 
             return feat
 
-    def _reload_wavLM_large(self, path="/home/bykang/WavLM-Large.pt", device: Optional[torch.device] = None):
+    def _reload_wavLM_large(self, path="./ckpt/WavLM-Large.pt", device: Optional[torch.device] = None):
         cpt = torch.load(path, map_location="cpu")
         cfg = WavLMConfig(cpt['cfg'])
         wavLM = WavLM(cfg)
