@@ -62,6 +62,23 @@ bash download.sh
 ```
 
 Alternatively, you can download them manually and place them in the `./ckpt/` directory.
+After Downloading, the tree should be like this:
+
+```bash
+├── ckpt
+│ ├── codec_ckpt
+│ │ ├── epoch=4-step=1400000.ckpt
+│ │ └── hub
+│ │ ├── models--facebook--w2v-bert-2.0
+│ │ │ ├── config.json
+│ │ │ ├── model.safetensors
+│ │ │ └── preprocessor_config.json
+│ │ └── version.txt
+│ ├── download_ckpt.py
+│ ├── download.sh
+│ ├── model.pt.tar
+│ └── WavLM-Large.pt
+```
 
 ## Inference
 
