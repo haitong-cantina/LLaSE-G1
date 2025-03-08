@@ -1,11 +1,5 @@
 python download_script.py \
     --source hf \
-    --repo_id microsoft/wavlm-large \
-    --filename pytorch_model.bin \
-    --save_path ./WavLM-Large.pt
-
-python download_script.py \
-    --source hf \
     --repo_id facebook/w2v-bert-2.0 \
     --filename model.safetensors \
     --save_path \
