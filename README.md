@@ -122,8 +122,6 @@ Our approach focuses on leveraging the LLM's comprehension capabilities to enabl
 
 ## Citation
 
-If you find this work useful, please cite our paper:
-
 ```
 @misc{kang2025llaseg1incentivizinggeneralizationcapability,
       title={LLaSE-G1: Incentivizing Generalization Capability for LLaMA-based Speech Enhancement}, 
@@ -140,4 +138,5 @@ If you find this work useful, please cite our paper:
 ## Contact
 
 For any questions, please contact: `beaukang02@gmail.com`
+![image](https://github.com/user-attachments/assets/ea72d06a-677e-422f-b030-9cc3f2536e88)
 
