@@ -138,5 +138,9 @@ Our approach focuses on leveraging the LLM's comprehension capabilities to enabl
 ## Contact
 
 For any questions, please contact: `beaukang02@gmail.com`
-![image](https://github.com/user-attachments/assets/ea72d06a-677e-422f-b030-9cc3f2536e88)
+<p align="center">
+    <a href="http://www.nwpu-aslp.org/">
+        <img src="src/ASLP.jpg" width="400"/>
+    </a>
+</p>
 
