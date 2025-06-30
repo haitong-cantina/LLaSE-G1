@@ -1,0 +1,10 @@
+/fsx/tts/haitong/data/speech_enhancement/test_data/movie/noisy/noisy_000000.mp3
+/fsx/tts/haitong/data/speech_enhancement/test_data/movie/noisy/noisy_000001.mp3
+/fsx/tts/haitong/data/speech_enhancement/test_data/movie/noisy/noisy_000002.mp3
+/fsx/tts/haitong/data/speech_enhancement/test_data/movie/noisy/noisy_000003.mp3
+/fsx/tts/haitong/data/speech_enhancement/test_data/movie/noisy/noisy_000004.mp3
+/fsx/tts/haitong/data/speech_enhancement/test_data/movie/noisy/noisy_000005.mp3
+/fsx/tts/haitong/data/speech_enhancement/test_data/movie/noisy/noisy_000006.mp3
+/fsx/tts/haitong/data/speech_enhancement/test_data/movie/noisy/noisy_000007.mp3
+/fsx/tts/haitong/data/speech_enhancement/test_data/movie/noisy/noisy_000008.mp3
+/fsx/tts/haitong/data/speech_enhancement/test_data/movie/noisy/noisy_000009.mp3

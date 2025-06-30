@@ -5,8 +5,8 @@ test:
   inference_time: 1
 
 save:
-  feat_dir: ./decode/feat/se
-  wav_dir: ./decode/wav/se
+  feat_dir: ./decode/feat/se/movie
+  wav_dir: ./decode/wav/se/movie
 
 task: SE #PLC,AEC,SS,TSE
 
@@ -18,4 +18,4 @@ nnet_conf:
   
 datareader:
   sample_rate: 16000
-  filename: /path/to/your/filelist
+  filename: datalists/movie.txt

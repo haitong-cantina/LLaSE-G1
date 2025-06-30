@@ -1,0 +1,4 @@
+__pycache__/
+ckpt/*pt.tar
+ckpt/*pt
+decode/feat/*
